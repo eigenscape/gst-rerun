@@ -1,0 +1,28 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Simon Guillot <simon@eigenscape.com>"]
+description = "gstreamer plugins for rerun"
+repository = "https://github.com/eigenscape/gst-rerun-tools"
+edition = "2021"
+
+# Root package for examples
+[package]
+name = "gst-rerun-tools"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+anyhow = "1"
+gst = { package = 'gstreamer', version = "0.23" }
+gst-rerunsink = { path = "crates/sink" }
+gst-reruntracer = { path = "crates/tracer" }
+rerun = { version = "0.25.1" }
+
+[[example]]
+name = "one-recording"
+path = "examples/one_recording.rs"

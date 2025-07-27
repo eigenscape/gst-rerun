@@ -1,0 +1,10 @@
+debug/
+target/
+.DS_Store
+/target
+.env
+**/__pycache__
+*.so
+*.dot
+*.png
+/vendor
