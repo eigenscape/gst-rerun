@@ -69,14 +69,9 @@ mod imp {
         fn schedule_deferred_log(
             &mut self,
             pipeline: &gst::Pipeline,
-            rec: Option<rerun::RecordingStream>,
+            rec: rerun::RecordingStream,
             entity_path: String,
         ) {
-            let Some(rec) = rec else {
-                gst::warning!(CAT, "Cannot schedule deferred log without a recorder");
-                return;
-            };
-
             self.pending_logs.insert(pipeline.clone());
 
             if let Some(source_id) = self.timeout_source_id.take() {
@@ -86,7 +81,32 @@ mod imp {
             let pending_pipeline = pipeline.clone();
             let debounce_duration = Duration::from_millis(self.debounce_ms);
             let source_id = glib::timeout_add(debounce_duration, move || {
-                RerunTracer::log_pipeline(&pending_pipeline, &rec, &entity_path);
+                // Analyze the pipeline and log each bin
+                let Ok(tree) = analyze_pipeline(&pending_pipeline) else {
+                    gst::error!(
+                        CAT,
+                        "Failed to analyze pipeline '{}'",
+                        pending_pipeline.name()
+                    );
+                    return glib::ControlFlow::Break;
+                };
+
+                for (bin_name, bin_graph) in &tree.bins {
+                    // Build path from root to this bin
+                    let mut bin_path = Vec::new();
+                    let mut current_bin = Some(bin_name.as_str());
+
+                    while let Some(bin) = current_bin {
+                        bin_path.push(bin);
+                        current_bin = tree.get_parent_bin(bin);
+                    }
+
+                    bin_path.reverse();
+                    bin_path.insert(0, entity_path.as_str());
+
+                    RerunTracer::log_graph(bin_name, bin_graph, &rec, &bin_path.join("/"));
+                }
+
                 glib::ControlFlow::Break
             });
 
@@ -328,13 +348,13 @@ mod imp {
         fn analyze_and_log_pipeline(&self, element: &gst::Element) {
             let mut current = element.clone();
             loop {
-                if current.type_().name() == "GstPipeline" {
-                    if let Ok(pipeline) = current.clone().downcast::<gst::Pipeline>() {
-                        self.log_pipeline_graph(&pipeline);
-                        return;
-                    }
+                // Try to downcast to Pipeline
+                if let Ok(pipeline) = current.clone().downcast::<gst::Pipeline>() {
+                    self.log_pipeline_graph(&pipeline);
+                    return;
                 }
 
+                // Move up to parent
                 current = match current
                     .parent()
                     .and_then(|p| p.downcast::<gst::Element>().ok())
@@ -355,181 +375,122 @@ mod imp {
                 return;
             };
 
-            let entity_path = state.entity_path.clone();
+            let entity_path_prefix = state.entity_path.clone();
             let should_log_now = state.should_log_immediately(pipeline);
 
             if !should_log_now {
-                state.schedule_deferred_log(pipeline, Some(rec), entity_path);
+                state.schedule_deferred_log(pipeline, rec, entity_path_prefix);
                 return;
             }
 
             drop(state_guard);
-            Self::log_pipeline(pipeline, &rec, &entity_path);
-        }
 
-        fn log_pipeline(pipeline: &gst::Pipeline, rec: &rerun::RecordingStream, entity_path: &str) {
-            let Ok(graph) = analyze_pipeline(pipeline) else {
+            // Analyze the pipeline and log each bin
+            let Ok(tree) = analyze_pipeline(pipeline) else {
                 gst::error!(CAT, "Failed to analyze pipeline '{}'", pipeline.name());
                 return;
             };
 
-            Self::log_graph(pipeline.name().as_str(), None, &graph, rec, entity_path);
+            for (bin_name, bin_graph) in &tree.bins {
+                // Build path from root to this bin
+                let mut bin_path = Vec::new();
+                let mut current_bin = Some(bin_name.as_str());
+
+                while let Some(bin) = current_bin {
+                    bin_path.push(bin);
+                    current_bin = tree.get_parent_bin(bin);
+                }
+
+                bin_path.reverse();
+                bin_path.insert(0, entity_path_prefix.as_str());
+
+                Self::log_graph(bin_name, bin_graph, &rec, &bin_path.join("/"));
+            }
         }
 
         fn compute_layout(
-            node_names: &[String],
-            edges: &[(String, String)],
+            graph: &petgraph::graph::DiGraph<crate::pipeline_graph::ElementInfo, ()>,
         ) -> Option<Vec<rerun::Position2D>> {
-            use petgraph::graphmap::DiGraphMap;
             use petgraph_layout::{LayeredLayout, LayoutEngine, Vec2};
 
-            // Build a petgraph from the node names and edges
-            let mut pg = DiGraphMap::<&str, ()>::new();
-
-            // Add all nodes
-            for name in node_names {
-                pg.add_node(name.as_str());
+            if graph.node_count() == 0 {
+                return Some(Vec::new());
             }
 
-            // Add all edges
-            for (src, sink) in edges {
-                pg.add_edge(src.as_str(), sink.as_str(), ());
-            }
-
-            // Create layout engine with spacing parameters
-            let engine = LayeredLayout::new(Vec2::new(150.0, 100.0));
-
-            // Define node sizes (uniform for now)
-            let sizes = |_node: &str| Vec2::new(10.0, 5.0);
-
-            // Compute layout
-            let positions = match engine.layout(&pg, &sizes) {
+            let engine = LayeredLayout::new(Vec2::new(100.0, 50.0));
+            let sizes = |_node: petgraph::graph::NodeIndex| Vec2::new(20.0, 10.0);
+            let positions = match engine.layout(graph, &sizes) {
                 Ok(pos) => pos,
                 Err(e) => {
-                    gst::warning!(CAT, "Failed to compute layout: {}", e);
+                    gst::error!(CAT, "Failed to compute layout: {}", e);
                     return None;
                 }
             };
 
-            // Convert positions to rerun format, maintaining node order
-            let rerun_positions: Vec<rerun::Position2D> = node_names
-                .iter()
-                .filter_map(|name| {
+            let rerun_positions: Vec<rerun::Position2D> = graph
+                .node_indices()
+                .filter_map(|node_idx| {
                     positions
-                        .get(&name.as_str())
+                        .get(&node_idx)
                         .map(|pos| rerun::Position2D::new(pos.x, pos.y))
                 })
                 .collect();
 
-            if rerun_positions.len() == node_names.len() {
+            if rerun_positions.len() == graph.node_count() {
                 Some(rerun_positions)
             } else {
-                gst::warning!(
+                gst::error!(
                     CAT,
                     "Layout computation incomplete: got {} positions for {} nodes",
                     rerun_positions.len(),
-                    node_names.len()
+                    graph.node_count()
                 );
                 None
             }
         }
 
-        fn build_entity_path(
-            entity_path_prefix: &str,
-            pipeline_name: &str,
-            parent_name: Option<&str>,
-            graph: &crate::pipeline_graph::PipelineGraph,
-        ) -> String {
-            let mut path_parts = vec![entity_path_prefix, pipeline_name];
-
-            if let Some(parent) = parent_name {
-                // Walk up the parent chain to build the full hierarchy
-                let mut ancestors = Vec::new();
-                let mut current = Some(parent);
-
-                while let Some(node_name) = current {
-                    ancestors.push(node_name);
-                    current = graph.nodes.get(node_name).and_then(|n| n.parent.as_deref());
-                }
-
-                // Reverse to get root-to-leaf order
-                ancestors.reverse();
-                path_parts.extend(ancestors);
-            }
-
-            path_parts.join("/")
-        }
-
         fn log_graph(
-            pipeline_name: &str,
-            parent_name: Option<&str>,
-            graph: &crate::pipeline_graph::PipelineGraph,
+            bin_name: &str,
+            bin_graph: &crate::pipeline_graph::BinGraph,
             rec: &rerun::RecordingStream,
-            entity_path_prefix: &str,
+            entity_path: &str,
         ) {
-            let nodes = if let Some(parent) = parent_name {
-                graph.get_children(parent)
-            } else {
-                graph.get_root_nodes()
-            };
-
-            if nodes.is_empty() {
+            if bin_graph.graph.node_count() == 0 {
                 return;
             }
 
-            let entity_path = Self::build_entity_path(entity_path_prefix, pipeline_name, parent_name, graph);
+            // Build node_names and labels by iterating nodes in graph order
+            let mut node_names = Vec::new();
+            let mut labels = Vec::new();
 
-            let node_names: Vec<String> = nodes.iter().map(|n| n.name.clone()).collect();
+            for node_idx in bin_graph.graph.node_indices() {
+                let elem = &bin_graph.graph[node_idx];
+                node_names.push(elem.name.clone());
 
-            let labels: Vec<String> = nodes
-                .iter()
-                .map(|node| {
-                    if let Some(factory_name) = &node.factory_name {
-                        format!("{}\n({})", node.name, factory_name)
-                    } else {
-                        node.name.clone()
-                    }
-                })
-                .collect();
-
-            let edges: Vec<(String, String)> = graph
-                .links
-                .iter()
-                .filter(|(src, sink)| node_names.contains(src) && node_names.contains(sink))
-                .cloned()
-                .collect();
-
-            // Compute layout positions using petgraph-layout
-            let positions = Self::compute_layout(&node_names, &edges);
-
-            let graph_nodes = if let Some(positions) = positions {
-                rerun::GraphNodes::new(node_names.clone())
-                    .with_labels(labels)
-                    .with_positions(positions)
-            } else {
-                rerun::GraphNodes::new(node_names.clone()).with_labels(labels)
-            };
-
-            if let Err(e) = rec.log(
-                entity_path.as_str(),
-                &[
-                    &graph_nodes as &dyn rerun::AsComponents,
-                    &rerun::GraphEdges::new(edges).with_directed_edges(),
-                ],
-            ) {
-                gst::error!(CAT, "Failed to log graph: {}", e);
+                let label = if let Some(factory_name) = &elem.factory_name {
+                    format!("{}\n({})", elem.name, factory_name)
+                } else {
+                    elem.name.clone()
+                };
+                labels.push(label);
             }
 
-            for node in nodes {
-                if !graph.get_children(&node.name).is_empty() {
-                    Self::log_graph(
-                        pipeline_name,
-                        Some(&node.name),
-                        graph,
-                        rec,
-                        entity_path_prefix,
-                    );
-                }
+            // Compute layout positions using the existing graph
+            let positions = Self::compute_layout(&bin_graph.graph);
+
+            let mut nodes = rerun::GraphNodes::new(node_names).with_labels(labels);
+            if let Some(positions) = positions {
+                nodes = nodes.with_positions(positions)
+            }
+
+            if let Err(e) = rec.log(
+                entity_path,
+                &[
+                    &nodes as &dyn rerun::AsComponents,
+                    &rerun::GraphEdges::new(bin_graph.get_edges()).with_directed_edges(),
+                ],
+            ) {
+                gst::error!(CAT, "Failed to log graph for bin '{}': {}", bin_name, e);
             }
         }
     }
