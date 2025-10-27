@@ -12,11 +12,13 @@ visualization:
 
 ## Quick Start
 
+Run the main example with:
+
 ```bash
 cargo run --example one-recording
 ```
 
-To use the tracer on a pipeline:
+To use the tracer and sink on a (non-Rust) pipeline:
 
 ```bash
 export GST_PLUGIN_PATH=$PWD/target/debug/
@@ -26,8 +28,8 @@ gst-launch-1.0 videotestsrc ! identity ! rerunsink app-id=my_pipeline
 
 With the command above, rerun will display two records. You can either
 merge them in the viewer, or set `recording-id` to a fixed value on both
-the tracer and sink, or spawn a single `rerun::RecordingStream`  as
-done in the example.
+the tracer and the sink, or spawn a single `rerun::RecordingStream`  as
+done in the first example.
 
 
 ## Development

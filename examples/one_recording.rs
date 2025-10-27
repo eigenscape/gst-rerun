@@ -30,14 +30,22 @@ fn main() -> Result<()> {
             ! video/x-raw
             ! tee name=raw
             ! queue
-            ! rerunsink entity-path=camera/raw
+            ! rerunsink entity-path=testsrc/raw
 
             raw.
             ! queue
             ! x264enc speed-preset=ultrafast tune=zerolatency b-adapt=false
             ! tee name=enc
             ! queue
-            ! rerunsink entity-path=camera/encoded
+            ! rerunsink entity-path=testsrc/encoded
+
+            raw.
+            ! queue
+            ! videoconvert
+            ! coloreffects preset=xpro
+            ! videoconvert
+            ! x264enc speed-preset=ultrafast tune=zerolatency b-adapt=false
+            ! rerunsink entity-path=testsrc/filtered/encoded
     "#;
     // FIXME add a decodebin above: enc. ! queue ! h264parse ! decodebin ! fakesink
     let pipeline = gst::parse::launch(pipeline_str)?
