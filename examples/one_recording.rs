@@ -34,7 +34,7 @@ fn main() -> Result<()> {
 
             raw.
             ! queue
-            ! x264enc speed-preset=ultrafast tune=zerolatency b-adapt=false
+            ! x264enc speed-preset=ultrafast tune=zerolatency b-adapt=false bframes=0
             ! tee name=enc
             ! queue
             ! rerunsink entity-path=testsrc/encoded
@@ -46,8 +46,10 @@ fn main() -> Result<()> {
             ! videoconvert
             ! x264enc speed-preset=ultrafast tune=zerolatency b-adapt=false
             ! rerunsink entity-path=testsrc/filtered/encoded
+
+            enc.
+            ! queue max-size-buffers=1 leaky=downstream ! h264parse ! decodebin ! fakesink async=false
     "#;
-    // FIXME add a decodebin above: enc. ! queue ! h264parse ! decodebin ! fakesink
     let pipeline = gst::parse::launch(pipeline_str)?
         .downcast::<gst::Pipeline>()
         .map_err(|_| anyhow!("Failed to downcast pipeline"))?;

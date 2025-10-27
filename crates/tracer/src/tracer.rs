@@ -434,6 +434,32 @@ mod imp {
             }
         }
 
+        fn build_entity_path(
+            entity_path_prefix: &str,
+            pipeline_name: &str,
+            parent_name: Option<&str>,
+            graph: &crate::pipeline_graph::PipelineGraph,
+        ) -> String {
+            let mut path_parts = vec![entity_path_prefix, pipeline_name];
+
+            if let Some(parent) = parent_name {
+                // Walk up the parent chain to build the full hierarchy
+                let mut ancestors = Vec::new();
+                let mut current = Some(parent);
+
+                while let Some(node_name) = current {
+                    ancestors.push(node_name);
+                    current = graph.nodes.get(node_name).and_then(|n| n.parent.as_deref());
+                }
+
+                // Reverse to get root-to-leaf order
+                ancestors.reverse();
+                path_parts.extend(ancestors);
+            }
+
+            path_parts.join("/")
+        }
+
         fn log_graph(
             pipeline_name: &str,
             parent_name: Option<&str>,
@@ -451,11 +477,7 @@ mod imp {
                 return;
             }
 
-            let entity_path = if let Some(parent) = parent_name {
-                format!("{}/{}/{}", entity_path_prefix, pipeline_name, parent)
-            } else {
-                format!("{}/{}", entity_path_prefix, pipeline_name)
-            };
+            let entity_path = Self::build_entity_path(entity_path_prefix, pipeline_name, parent_name, graph);
 
             let node_names: Vec<String> = nodes.iter().map(|n| n.name.clone()).collect();
 
