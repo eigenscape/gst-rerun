@@ -376,6 +376,64 @@ mod imp {
             Self::log_graph(pipeline.name().as_str(), None, &graph, rec, entity_path);
         }
 
+        fn compute_layout(
+            node_names: &[String],
+            edges: &[(String, String)],
+        ) -> Option<Vec<rerun::Position2D>> {
+            use petgraph::graphmap::DiGraphMap;
+            use petgraph_layout::{LayeredLayout, LayoutEngine, Vec2};
+
+            // Build a petgraph from the node names and edges
+            let mut pg = DiGraphMap::<&str, ()>::new();
+
+            // Add all nodes
+            for name in node_names {
+                pg.add_node(name.as_str());
+            }
+
+            // Add all edges
+            for (src, sink) in edges {
+                pg.add_edge(src.as_str(), sink.as_str(), ());
+            }
+
+            // Create layout engine with spacing parameters
+            let engine = LayeredLayout::new(Vec2::new(150.0, 100.0));
+
+            // Define node sizes (uniform for now)
+            let sizes = |_node: &str| Vec2::new(10.0, 5.0);
+
+            // Compute layout
+            let positions = match engine.layout(&pg, &sizes) {
+                Ok(pos) => pos,
+                Err(e) => {
+                    gst::warning!(CAT, "Failed to compute layout: {}", e);
+                    return None;
+                }
+            };
+
+            // Convert positions to rerun format, maintaining node order
+            let rerun_positions: Vec<rerun::Position2D> = node_names
+                .iter()
+                .filter_map(|name| {
+                    positions
+                        .get(&name.as_str())
+                        .map(|pos| rerun::Position2D::new(pos.x, pos.y))
+                })
+                .collect();
+
+            if rerun_positions.len() == node_names.len() {
+                Some(rerun_positions)
+            } else {
+                gst::warning!(
+                    CAT,
+                    "Layout computation incomplete: got {} positions for {} nodes",
+                    rerun_positions.len(),
+                    node_names.len()
+                );
+                None
+            }
+        }
+
         fn log_graph(
             pipeline_name: &str,
             parent_name: Option<&str>,
@@ -419,12 +477,22 @@ mod imp {
                 .cloned()
                 .collect();
 
+            // Compute layout positions using petgraph-layout
+            let positions = Self::compute_layout(&node_names, &edges);
+
+            let graph_nodes = if let Some(positions) = positions {
+                rerun::GraphNodes::new(node_names.clone())
+                    .with_labels(labels)
+                    .with_positions(positions)
+            } else {
+                rerun::GraphNodes::new(node_names.clone()).with_labels(labels)
+            };
+
             if let Err(e) = rec.log(
                 entity_path.as_str(),
                 &[
-                    &rerun::GraphNodes::new(node_names.clone()).with_labels(labels)
-                        as &dyn rerun::AsComponents,
-                    &rerun::GraphEdges::new(edges),
+                    &graph_nodes as &dyn rerun::AsComponents,
+                    &rerun::GraphEdges::new(edges).with_directed_edges(),
                 ],
             ) {
                 gst::error!(CAT, "Failed to log graph: {}", e);
