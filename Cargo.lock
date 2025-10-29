@@ -6001,7 +6001,6 @@ dependencies = [
 [[package]]
 name = "pipewerk-graph-layout"
 version = "0.1.0"
-source = "git+ssh://git@github.com/eigenscape/pipewerk.git#76a689b962f14eaa6ab3523fd49da53d23af6259"
 dependencies = [
  "petgraph 0.6.5",
  "thiserror 1.0.69",

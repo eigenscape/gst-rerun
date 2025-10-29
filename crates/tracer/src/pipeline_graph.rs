@@ -97,7 +97,9 @@ impl PipelineTreeBuilder {
                         factory_name,
                     };
                     let node_idx = bin_graph.graph.add_node(element_info);
-                    bin_graph.node_indices.insert(element_name.clone(), node_idx);
+                    bin_graph
+                        .node_indices
+                        .insert(element_name.clone(), node_idx);
 
                     // If this element is also a bin, recursively process it
                     if element.is::<Bin>() {
@@ -295,14 +297,19 @@ mod tests {
             .expect("Should have a nested bin");
 
         // Get the nested bin graph
-        let nested_bin = tree.get_bin(nested_bin_name).expect("Should have nested bin graph");
+        let nested_bin = tree
+            .get_bin(nested_bin_name)
+            .expect("Should have nested bin graph");
 
         // Nested bin should have 2 elements: queue and fakesink
         assert_eq!(nested_bin.graph.node_count(), 2);
         assert_eq!(nested_bin.graph.edge_count(), 1);
 
         // Verify hierarchy
-        assert_eq!(tree.get_parent_bin(nested_bin_name), Some(tree.root.as_str()));
+        assert_eq!(
+            tree.get_parent_bin(nested_bin_name),
+            Some(tree.root.as_str())
+        );
     }
 
     #[test]
