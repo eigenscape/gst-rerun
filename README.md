@@ -1,8 +1,8 @@
 <p align="center">
-    <img src="https://github.com/simgt/glitch/actions/workflows/ci.yml/badge.svg?branch=main" />
+    <img src="https://github.com/eigenscape/gst-rerun/actions/workflows/ci.yml/badge.svg" />
 </p>
 
-# gst-rerun-tools
+# gst-rerun
 
 A set of plugins for gstreamer to forward data to [Rerun](https://rerun.io/) for real-time
 visualization:

@@ -3603,7 +3603,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gst-rerun-tools"
+name = "gst-rerun"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3649,7 +3649,7 @@ dependencies = [
  "log",
  "once_cell",
  "petgraph 0.6.5",
- "petgraph-layout",
+ "pipewerk-graph-layout",
  "rerun",
  "ron 0.8.1",
  "test-log",
@@ -5888,14 +5888,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "petgraph-layout"
-version = "0.1.0"
-dependencies = [
- "petgraph 0.6.5",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "phf"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6004,6 +5996,14 @@ dependencies = [
  "atomic-waker",
  "fastrand",
  "futures-io",
+]
+
+[[package]]
+name = "pipewerk-graph-layout"
+version = "0.1.0"
+dependencies = [
+ "petgraph 0.6.5",
+ "thiserror 1.0.69",
 ]
 
 [[package]]

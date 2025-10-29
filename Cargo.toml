@@ -6,12 +6,11 @@ resolver = "2"
 version = "0.1.0"
 authors = ["Simon Guillot <simon@eigenscape.com>"]
 description = "gstreamer plugins for rerun"
-repository = "https://github.com/eigenscape/gst-rerun-tools"
+repository = "https://github.com/eigenscape/gst-rerun"
 edition = "2021"
 
-# Root package for examples
 [package]
-name = "gst-rerun-tools"
+name = "gst-rerun"
 version.workspace = true
 edition.workspace = true
 publish = false
