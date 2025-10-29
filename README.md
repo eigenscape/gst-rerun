@@ -10,6 +10,12 @@ visualization:
 - A tracer to visualize the pipelines' graph structures
 - A sink element to forward video frames
 
+<p align="center">
+    <img src="./screenshot.png" width="70%" />
+</p>
+
+If your codebase is in C++, you may want to consider ridgerun's [gst-rerunsink plugin](https://github.com/RidgeRun/gst-rerunsink).
+
 ## Quick Start
 
 Run the main example with:
