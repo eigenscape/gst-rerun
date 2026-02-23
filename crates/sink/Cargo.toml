@@ -12,7 +12,7 @@ gst = { package = 'gstreamer', version = "0.23" }
 gst-base = { package = 'gstreamer-base', version = "0.23" }
 gst-video = { package = "gstreamer-video", version = "0.23" }
 once_cell = "1"
-rerun = { version = "0.25.1", features = ["native_viewer"] }
+rerun = { workspace = true, features = ["native_viewer"] }
 thiserror = "2.0"
 
 [lib]
