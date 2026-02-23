@@ -1,18 +1,18 @@
-mod layers;
 mod crossings;
+mod layers;
 mod positions;
 
 use crate::{LayoutEngine, NodeSizes, Point, Vec2};
+use petgraph::graphmap::DiGraphMap;
 use petgraph::visit::{IntoNeighborsDirected, IntoNodeIdentifiers};
 use petgraph::Direction;
-use petgraph::graphmap::DiGraphMap;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
 use thiserror::Error;
 
-use layers::assign_layers;
 use crossings::minimize_crossings;
+use layers::assign_layers;
 use positions::assign_coordinates;
 
 /// Errors that can occur during layered layout computation
@@ -83,7 +83,10 @@ impl LayeredLayout {
     ///
     /// # Errors
     /// Returns an error if the graph contains cycles
-    pub fn compute_layers<G>(&self, graph: G) -> Result<Layers<G::NodeId>, LayeredLayoutError<G::NodeId>>
+    pub fn compute_layers<G>(
+        &self,
+        graph: G,
+    ) -> Result<Layers<G::NodeId>, LayeredLayoutError<G::NodeId>>
     where
         G: IntoNodeIdentifiers + IntoNeighborsDirected,
         G::NodeId: Copy + Ord + Hash + std::fmt::Debug,
@@ -113,11 +116,7 @@ impl LayeredLayout {
     ///
     /// This phase assigns coordinates to nodes based on their layer structure
     /// and current sizes. It can be called repeatedly as node sizes change.
-    pub fn compute_positions<N, S>(
-        &self,
-        layers: &Layers<N>,
-        sizes: &S,
-    ) -> HashMap<N, Point>
+    pub fn compute_positions<N, S>(&self, layers: &Layers<N>, sizes: &S) -> HashMap<N, Point>
     where
         N: Copy + Ord + Hash + std::fmt::Debug,
         S: NodeSizes<N>,

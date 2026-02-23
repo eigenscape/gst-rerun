@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
-      - name: Run rusttmt
+      - name: Rustfmt check
         run: cargo fmt --all --check
       - name: Install deps
         run: |
@@ -37,7 +37,7 @@ jobs:
             libthai0
           gst-launch-1.0 --version
       - name: Clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Build
         run: cargo build -v
       - name: Run tests

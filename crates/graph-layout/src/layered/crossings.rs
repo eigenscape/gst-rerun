@@ -62,14 +62,8 @@ where
                 for target1 in graph.neighbors_directed(node1, Direction::Outgoing) {
                     for target2 in graph.neighbors_directed(node2, Direction::Outgoing) {
                         if lower_layer.contains(&target1) && lower_layer.contains(&target2) {
-                            let pos1 = lower_layer
-                                .iter()
-                                .position(|&n| n == target1)
-                                .unwrap();
-                            let pos2 = lower_layer
-                                .iter()
-                                .position(|&n| n == target2)
-                                .unwrap();
+                            let pos1 = lower_layer.iter().position(|&n| n == target1).unwrap();
+                            let pos2 = lower_layer.iter().position(|&n| n == target2).unwrap();
                             if (idx1 < idx2) != (pos1 < pos2) {
                                 crossings += 1;
                             }

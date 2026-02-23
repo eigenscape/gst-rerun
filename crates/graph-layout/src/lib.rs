@@ -11,7 +11,7 @@
 //! # Example
 //!
 //! ```
-//! use graph_layout::{LayeredLayout, LayoutEngine, Vec2};
+//! use gst_rerun_graph_layout::{LayeredLayout, LayoutEngine, Vec2};
 //! use petgraph::graphmap::DiGraphMap;
 //!
 //! // Create a graph

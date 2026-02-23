@@ -11,7 +11,9 @@ use std::hash::Hash;
 /// Uses a two-pass approach to minimize edge lengths:
 /// - First pass: assign each node to the layer after its predecessors
 /// - Second pass: move nodes closer to their successors when possible
-pub(crate) fn assign_layers<G>(graph: &G) -> Result<Vec<Vec<G::NodeId>>, LayeredLayoutError<G::NodeId>>
+pub(crate) fn assign_layers<G>(
+    graph: &G,
+) -> Result<Vec<Vec<G::NodeId>>, LayeredLayoutError<G::NodeId>>
 where
     G: IntoNodeIdentifiers + IntoNeighborsDirected,
     G::NodeId: Copy + Ord + Hash + std::fmt::Debug,

@@ -75,8 +75,11 @@ impl PipelineTreeBuilder {
         let bin_name = bin.as_ref().name().to_string();
 
         // Create a new graph for this bin
-        let mut bin_graph = BinGraph::default();
-        bin_graph.bin_name = bin_name.clone();
+        let bin_graph = BinGraph {
+            bin_name: bin_name.clone(),
+            ..Default::default()
+        };
+        let mut bin_graph = bin_graph;
 
         // Record hierarchy
         if let Some(parent) = parent_bin_name {
