@@ -46,9 +46,6 @@ fn main() -> Result<()> {
             ! videoconvert
             ! x264enc speed-preset=ultrafast tune=zerolatency b-adapt=false
             ! rerunsink entity-path=testsrc/filtered/encoded
-
-            enc.
-            ! queue max-size-buffers=1 leaky=downstream ! h264parse ! decodebin ! fakesink async=false
     "#;
     let pipeline = gst::parse::launch(pipeline_str)?
         .downcast::<gst::Pipeline>()
