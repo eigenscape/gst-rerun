@@ -2,6 +2,10 @@
 members = ["crates/*"]
 resolver = "2"
 
+[workspace.dependencies]
+petgraph = "0.6"
+thiserror = "2"
+
 [workspace.package]
 version = "0.1.0"
 authors = ["Simon Guillot <simon@eigenscape.com>"]

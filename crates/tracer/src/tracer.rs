@@ -27,7 +27,7 @@ mod imp {
     use crate::pipeline_graph::analyze_pipeline;
     use gst::{glib, prelude::*, subclass::prelude::*};
     use once_cell::sync::Lazy;
-    use pipewerk_graph_layout::{LayeredLayout, LayoutEngine, Vec2};
+    use gst_rerun_graph_layout::{LayeredLayout, LayoutEngine, Vec2};
     use std::collections::{HashMap, HashSet};
     use std::str::FromStr;
     use std::sync::RwLock;

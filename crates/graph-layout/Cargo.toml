@@ -1,0 +1,11 @@
+[package]
+name = "gst-rerun-graph-layout"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Layered graph layout algorithm for petgraph traits"
+
+[dependencies]
+petgraph.workspace = true
+thiserror.workspace = true

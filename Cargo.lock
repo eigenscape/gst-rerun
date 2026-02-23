@@ -3614,6 +3614,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gst-rerun-graph-layout"
+version = "0.1.0"
+dependencies = [
+ "petgraph 0.6.5",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "gst-rerunsink"
 version = "0.1.0"
 dependencies = [
@@ -3638,6 +3646,7 @@ dependencies = [
  "enum_dispatch",
  "glib 0.20.12",
  "gst-plugin-version-helper",
+ "gst-rerun-graph-layout",
  "gstreamer 0.23.7",
  "gstreamer-app",
  "gstreamer-audio",
@@ -3649,7 +3658,6 @@ dependencies = [
  "log",
  "once_cell",
  "petgraph 0.6.5",
- "pipewerk-graph-layout",
  "rerun",
  "ron 0.8.1",
  "test-log",
@@ -5996,14 +6004,6 @@ dependencies = [
  "atomic-waker",
  "fastrand",
  "futures-io",
-]
-
-[[package]]
-name = "pipewerk-graph-layout"
-version = "0.1.0"
-dependencies = [
- "petgraph 0.6.5",
- "thiserror 1.0.69",
 ]
 
 [[package]]
